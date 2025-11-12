@@ -165,8 +165,10 @@ class VITA(BaseModel):
             input_tensor, src_key_padding_mask=src_key_padding_mask
         )
 
+        mu_p, var_p = self.sinusoidal_prior_forward(weather, interval)
+
         # Clip sigma to prevent numerical instability and overly negative log terms
         var_x = torch.clamp(var_x, min=1e-6, max=1)  # sigma is in [0.001, 1]
-        mu_p, var_p = self.sinusoidal_prior_forward(weather, interval)
+        var_p = torch.clamp(var_p, min=1e-6, max=1)  # sigma is in [0.001, 1]
 
         return mu_x, var_x, mu_p, var_p
