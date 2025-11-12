@@ -159,6 +159,7 @@ class CropDataset(Dataset):
                     f"Only 1 year of yield data for location {loc_ID} in year {year}. "
                 )
             # the current year's yield is the target variable, so replace it with last year's yield
+            # this is done to follow Khaki et. al.
             y_past[-1] = y_past[-2]
 
             # Preprocess weather data for the model
