@@ -2,7 +2,7 @@
 
 Official implementation of VITA, a variational pretraining framework that learns weather representations from rich satellite data and transfers them to yield prediction tasks with limited ground-based measurements.
 
-[[arXiv:2508.03589]](https://arxiv.org/abs/2508.03589) [[Pretrained Model]]( https://huggingface.co/notadib/VITA) [[AAAI-26]](https://aaai.org/conference/aaai/aaai-26/)
+[[arXiv:2508.03589]](https://arxiv.org/abs/2508.03589) [[Pretrained Model]]( https://huggingface.co/notadib/VITA) [[AAAI-26 Slides]](/docs/Variational_Transformer_slides.pdf)
 
 ## Overview
 
