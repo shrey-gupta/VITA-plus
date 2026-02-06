@@ -12,8 +12,48 @@ from src.utils.constants import (
     CROP_YIELD_STATS,
 )
 
+# GridMET weekly configuration: mapped vars into 31-slot NASA layout
+# Only vars with clear NASA counterparts are used
+GRIDMET_VARS = [
+    "pr",    # precip
+    "srad",  # solar
+    "tmmx",  # max temp
+    "tmmn",  # min temp
+    "sph",   # specific humidity
+    "vs",    # wind speed
+    "th",    # wind direction
+    "vpd",   # vapor pressure deficit
+]
+N_WEEKS = 52
+SEASON_START_WEEK = 15  # 1-based; weeks 15-44 contain data
+SEASON_WEEKS = 30
+# Map gridMET vars into 31-feature positions used by pretrained VITA (NASA POWER layout)
+GRIDMET_TO_NASA_IDX = {
+    "pr": 7,    # PRECTOTCORR
+    "srad": 8,  # ALLSKY_SFC_SW_DWN
+    "tmmx": 1,  # T2M_MAX
+    "tmmn": 2,  # T2M_MIN
+    "sph": 29,  # use VAP slot for specific humidity
+    "vs": 3,    # wind speed -> unused slot
+    "th": 4,    # wind direction -> unused slot
+    "vpd": 12,  # vapor pressure deficit -> unused slot
+}
 
-def standardize_weather_cols(data: pd.DataFrame) -> pd.DataFrame:
+
+def resolve_weather_vars(weather_vars: list[str] | None) -> list[str]:
+    if not weather_vars:
+        return GRIDMET_VARS
+    unknown = [v for v in weather_vars if v not in GRIDMET_TO_NASA_IDX]
+    if unknown:
+        raise ValueError(
+            f"Unknown weather vars: {unknown}. Allowed: {sorted(GRIDMET_TO_NASA_IDX.keys())}"
+        )
+    return weather_vars
+
+
+def standardize_weather_cols(
+    data: pd.DataFrame, weather_vars: list[str] | None = None
+) -> pd.DataFrame:
     """
     Standardize only weather columns using dataset-based scalers.
 
@@ -25,8 +65,11 @@ def standardize_weather_cols(data: pd.DataFrame) -> pd.DataFrame:
     """
     data_copy = data.copy()
 
-    # Get weather columns
-    weather_cols = [f"W_{i}_{j}" for i in range(1, 7) for j in range(1, 53)]
+    # Get weather columns (weekly gridMET vars)
+    weather_vars = resolve_weather_vars(weather_vars)
+    weather_cols = [
+        col for col in data_copy.columns if any(col.startswith(f"{v}_week_") for v in weather_vars)
+    ]
     weather_cols_in_data = [col for col in weather_cols if col in data_copy.columns]
 
     # Use dataset-based scalers for weather columns only
@@ -52,40 +95,22 @@ class CropDataset(Dataset):
         n_past_years=5,
         test_gap=0,
         crop_type="soybean",
+        weather_vars: list[str] | None = None,
     ):
         self.crop_type = crop_type
         self.yield_col = f"{crop_type}_yield"
 
-        self.weather_cols = [f"W_{i}_{j}" for i in range(1, 7) for j in range(1, 53)]
-        self.practice_cols = [f"P_{i}" for i in range(1, 15)]
-        soil_measurements = [
-            "bdod",
-            "cec",
-            "cfvo",
-            "clay",
-            "nitrogen",
-            "ocd",
-            "ocs",
-            "phh2o",
-            "sand",
-            "silt",
-            "soc",
+        self.weather_vars = resolve_weather_vars(weather_vars)
+        self.weather_cols = [
+            f"{v}_week_{j}" for v in self.weather_vars for j in range(1, N_WEEKS + 1)
         ]
-        soil_depths = ["0-5cm", "5-15cm", "15-30cm", "30-60cm", "60-100cm", "100-200cm"]
-        self.soil_cols = [
-            f"{measure}_mean_{depth}"
-            for measure in soil_measurements
-            for depth in soil_depths
-        ]
+        self.practice_cols: list[str] = []
+        self.soil_cols: list[str] = []
 
-        # Define weather indices used in preprocessing
-        # 7: precipitation (PRECTOTCORR)
-        # 8: solar radiation (ALLSKY_SFC_SW_DWN)
-        # 11: snow depth (SNODP)
-        # 1: max temp (T2M_MAX)
-        # 2: min temp (T2M_MIN)
-        # 29: vap pressure (VAP)
-        self.weather_indices = torch.tensor([7, 8, 11, 1, 2, 29])
+        # Define weather indices used in preprocessing (mapped into 31-slot layout)
+        self.weather_indices = torch.tensor(
+            [GRIDMET_TO_NASA_IDX[v] for v in self.weather_vars]
+        )
         # substract test gap from start year
         start_year -= test_gap
 
@@ -136,16 +161,9 @@ class CropDataset(Dataset):
             weather = (
                 query_data[self.weather_cols]
                 .values.astype("float32")
-                .reshape((-1, 6, 52))
-            )  # 6 measurements, 52 weeks
-            practices = (
-                query_data[self.practice_cols]
-                .values.astype("float32")
-                .reshape((-1, 14))
-            )  # 14 practices
-            soil = (
-                query_data[self.soil_cols].values.astype("float32").reshape((-1, 11, 6))
-            )  # 11 measurements, at 6 depths
+                .reshape((-1, len(self.weather_vars), N_WEEKS))
+            )  # 8 measurements, 52 weeks (season weeks 15-44 populated)
+            n_years = weather.shape[0]
             year_data = query_data["year"].values.astype("float32")
             coord = torch.FloatTensor(
                 query_data[["lat", "lng"]].values.astype("float32")
@@ -194,24 +212,31 @@ class CropDataset(Dataset):
                 n_years * seq_len
             )  # [n_years * seq_len]
 
-            # Create padded weather with specific weather indices
+            # Create padded weather with specific weather indices (already 52 weeks)
+            padded_steps = n_years * seq_len
             padded_weather = torch.zeros(
-                (seq_len * n_years, TOTAL_WEATHER_VARS),
+                (padded_steps, TOTAL_WEATHER_VARS),
             )
             padded_weather[:, self.weather_indices] = torch.FloatTensor(weather)
 
-            # Create weather feature mask
+            # Create weather feature mask: unmask only season weeks (15-44) for each year
             weather_feature_mask = torch.ones(
+                padded_steps,
                 TOTAL_WEATHER_VARS,
                 dtype=torch.bool,
             )
-            weather_feature_mask[self.weather_indices] = False
-            weather_feature_mask = weather_feature_mask.unsqueeze(0).expand(
-                n_years * seq_len, -1
-            )
+            season_start = SEASON_START_WEEK - 1
+            season_end = season_start + SEASON_WEEKS
+            for y_idx in range(n_years):
+                start = y_idx * seq_len + season_start
+                end = y_idx * seq_len + season_end
+                weather_feature_mask[start:end, self.weather_indices] = False
 
             # Create temporal interval (weekly data)
             interval = torch.full((1,), 7, dtype=torch.float32)
+
+            # Keep year for loss weighting / analysis
+            year_tensor = torch.tensor([year], dtype=torch.float32)
 
             self.data.append(
                 (
@@ -220,10 +245,9 @@ class CropDataset(Dataset):
                     year_expanded,  # (n_years * 52,)
                     interval,  # (1,)
                     weather_feature_mask,  # (n_years * 52, TOTAL_WEATHER_VARS)
-                    practices,  # (n_years, 14)
-                    soil,  # (n_years, 11, 6)
                     y_past,  # (n_years,)
                     y,  # (1,)
+                    year_tensor,  # (1,)
                 )
             )
 
@@ -251,6 +275,7 @@ def split_train_test_by_year(
     n_past_years: int,
     crop_type: str,
     test_gap: int = 0,
+    weather_vars: list[str] | None = None,
 ):
     # you need n_train_years + 1 years of data
     # n_train years to have at least one training datapoint
@@ -278,7 +303,7 @@ def split_train_test_by_year(
 
     if standardize:
         # First standardize weather data
-        data = standardize_weather_cols(data)
+        data = standardize_weather_cols(data, weather_vars=weather_vars)
 
         # Then standardize non-weather data using original approach
         cols_to_exclude = [
@@ -289,13 +314,22 @@ def split_train_test_by_year(
             "lat",
             "lng",
             yield_col,
+            "geometry",
+            "centroid",
+            "STATEFP",
+            "COUNTYFP",
         ]
         # Also exclude weather columns since we already standardized them
-        weather_cols = [f"W_{i}_{j}" for i in range(1, 7) for j in range(1, 53)]
+        weather_vars = resolve_weather_vars(weather_vars)
+        weather_cols = [
+            f"{v}_week_{j}" for v in weather_vars for j in range(1, N_WEEKS + 1)
+        ]
         cols_to_exclude.extend(weather_cols)
 
         cols_to_standardize = [
-            col for col in data.columns if col not in cols_to_exclude
+            col
+            for col in data.columns
+            if col not in cols_to_exclude and pd.api.types.is_numeric_dtype(data[col])
         ]
 
         # Standardize non-weather data (soil, practices, etc.)
@@ -327,6 +361,7 @@ def split_train_test_by_year(
         n_past_years=n_past_years,
         test_gap=test_gap,
         crop_type=crop_type,
+        weather_vars=weather_vars,
     )
     test_dataset = CropDataset(
         data.copy(),
@@ -336,6 +371,7 @@ def split_train_test_by_year(
         n_past_years=n_past_years,
         test_gap=test_gap,
         crop_type=crop_type,
+        weather_vars=weather_vars,
     )
 
     # Return the train and test datasets
@@ -343,7 +379,8 @@ def split_train_test_by_year(
 
 
 def read_khaki_corn_belt_dataset(data_dir: str):
-    full_filename = "khaki_corn_belt/khaki_multi_crop_yield.csv"
+    # Use weekly aggregated gridMET features
+    full_filename = "khaki_corn_belt/gridmet-weekly.csv"
     usa_df = pd.read_csv(data_dir + full_filename)
     usa_df = usa_df.sort_values(["loc_ID", "year"])
     return usa_df
@@ -359,6 +396,7 @@ def get_train_test_loaders(
     num_workers: int,
     crop_type: str,
     test_gap: int = 0,
+    weather_vars: list[str] | None = None,
 ) -> Tuple[DataLoader, DataLoader]:
 
     if n_train_years <= 1:
@@ -383,6 +421,7 @@ def get_train_test_loaders(
         n_past_years=n_past_years,
         crop_type=crop_type,
         test_gap=test_gap,
+        weather_vars=weather_vars,
     )
 
     if n_train_years < n_past_years + 1:

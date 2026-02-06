@@ -2,14 +2,11 @@
 
 Official implementation of VITA, a variational pretraining framework that learns weather representations from rich satellite data and transfers them to yield prediction tasks with limited ground-based measurements.
 
-[[arXiv:2508.03589]](https://arxiv.org/abs/2508.03589) [[Pretrained Model]]( https://huggingface.co/notadib/VITA) [[AAAI-26 Slides]](/docs/Variational_Transformer_slides.pdf)
+[[arXiv:2508.03589]](https://arxiv.org/abs/2508.03589) [[Pretrained Model]]( https://huggingface.co/notadib/VITA) [[AAAI-26]](https://aaai.org/conference/aaai/aaai-26/)
 
 ## Overview
 
 VITA addresses the data asymmetry problem in agricultural AI: pretraining uses 31 meteorological variables from NASA POWER satellite data, while deployment relies on only 6 basic weather features. Through variational pretraining with a seasonality-aware sinusoidal prior, VITA achieves state-of-the-art performance in predicting corn and soybean yields across 763 U.S. Corn Belt counties, particularly during extreme weather years.
-
-## Updates
-* 11/21/2025: 🏆 VITA was selected for an oral presentation at AAAI 2026
 
 ## Usage
 
@@ -22,8 +19,8 @@ VITA addresses the data asymmetry problem in agricultural AI: pretraining uses 3
 ```bash
 pip install -r requirements.txt
 
-python -m src.downloaders.nasa_power_dataset --data-dir path/to/data/dir
-python -m src.downloaders.khaki_corn_belt_dataset --data-dir path/to/data/dir
+python -m src.downloaders.nasa_power_dataset
+python -m src.downloaders.khaki_corn_belt_dataset
 ```
 
 ### Pretraining

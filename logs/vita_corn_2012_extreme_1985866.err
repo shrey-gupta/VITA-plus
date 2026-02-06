@@ -1,0 +1,161 @@
+cpu-bind=MASK - g004, task  0  0 [874805]: mask 0xfc00000c0000000 set
+2026-02-02 12:19:32,170 - INFO - Command-line arguments:
+2026-02-02 12:19:32,170 - INFO - data_dir: data/
+2026-02-02 12:19:32,170 - INFO - batch_size: 8
+2026-02-02 12:19:32,170 - INFO - n_past_years: 3
+2026-02-02 12:19:32,170 - INFO - n_epochs: 40
+2026-02-02 12:19:32,170 - INFO - init_lr: 0.00025
+2026-02-02 12:19:32,170 - INFO - decay_factor: None
+2026-02-02 12:19:32,171 - INFO - n_warmup_epochs: 10
+2026-02-02 12:19:32,171 - INFO - pretrained_model_path: checkpoints/vita_sinusoi.pth
+2026-02-02 12:19:32,171 - INFO - model_size: small
+2026-02-02 12:19:32,171 - INFO - n_train_years: 28
+2026-02-02 12:19:32,171 - INFO - k: 1
+2026-02-02 12:19:32,171 - INFO - beta: 0.0001
+2026-02-02 12:19:32,171 - INFO - seed: 1234
+2026-02-02 12:19:32,171 - INFO - crop_type: corn
+2026-02-02 12:19:32,171 - INFO - test_year: 2012
+2026-02-02 12:19:32,171 - INFO - test_type: extreme
+2026-02-02 12:19:32,171 - INFO - resume_from_checkpoint: None
+2026-02-02 12:19:32,171 - INFO - year_weights: None
+2026-02-02 12:19:32,171 - INFO - cvar_frac: 0.0
+2026-02-02 12:19:32,171 - INFO - feature_dropout_prob: 0.0
+2026-02-02 12:19:32,171 - INFO - feature_dropout_protect: 7,12
+2026-02-02 12:19:32,171 - INFO - drift_weight_strength: 0.0
+2026-02-02 12:19:32,171 - INFO - drift_min_weight: 0.2
+2026-02-02 12:19:32,171 - INFO - drift_features: pr,vpd
+2026-02-02 12:19:32,171 - INFO - drift_target_year: None
+2026-02-02 12:19:32,171 - INFO - attn_bias_strength: 0.0
+2026-02-02 12:19:32,171 - INFO - target_stats_start_week: 15
+2026-02-02 12:19:32,171 - INFO - target_stats_max_week: 35
+2026-02-02 12:19:36,455 - INFO - Starting 1-fold cross validation
+2026-02-02 12:19:36,455 - INFO - Starting fold 1/1
+2026-02-02 12:19:36,467 - INFO - Initializing vita_corn_yield model
+2026-02-02 12:19:36,467 - INFO - Initializing vita model
+2026-02-02 12:19:36,715 - INFO - VITAYieldModel(
+  (weather_model): VITA(
+    (in_proj): Linear(in_features=34, out_features=200, bias=True)
+    (positional_encoding): VanillaPositionalEncoding()
+    (transformer_encoder): TransformerEncoder(
+      (layers): ModuleList(
+        (0-3): 4 x TransformerEncoderLayer(
+          (self_attn): MultiheadAttention(
+            (out_proj): NonDynamicallyQuantizableLinear(in_features=200, out_features=200, bias=True)
+          )
+          (linear1): Linear(in_features=200, out_features=800, bias=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+          (linear2): Linear(in_features=800, out_features=200, bias=True)
+          (norm1): LayerNorm((200,), eps=1e-05, elementwise_affine=True)
+          (norm2): LayerNorm((200,), eps=1e-05, elementwise_affine=True)
+          (dropout1): Dropout(p=0.1, inplace=False)
+          (dropout2): Dropout(p=0.1, inplace=False)
+        )
+      )
+    )
+    (out_proj): Linear(in_features=200, out_features=62, bias=True)
+  )
+  (weather_attention): Sequential(
+    (0): Linear(in_features=31, out_features=16, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=16, out_features=1, bias=True)
+  )
+  (yield_mlp): Sequential(
+    (0): Linear(in_features=35, out_features=120, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=120, out_features=1, bias=True)
+  )
+)
+2026-02-02 12:19:37,559 - INFO - using cosine annealing
+2026-02-02 12:19:37,559 - INFO - Total number of parameters: 2.0m
+2026-02-02 12:19:37,559 - INFO - Distributed training: False, World size: 1
+2026-02-02 12:19:37,559 - INFO - Batch size per GPU: 8
+2026-02-02 12:19:37,559 - INFO - Test type: extreme on years [2002, 2004, 2009, 2012, 2014]
+2026-02-02 12:19:37,559 - INFO - Single test year mode - Testing on year: 2012
+2026-02-02 12:19:39,357 - INFO - Saving mean (117.240) and std (33.699) from training data for corn
+2026-02-02 12:19:54,601 - INFO - Creating train dataloader with 31723 samples for training years 1984-2011 using corn yield.
+2026-02-02 12:20:35,325 - INFO - Creating test dataloader with 1086 samples for test year 2012 using corn yield.
+2026-02-02 12:20:36,704 - INFO - Started training epoch.
+2026-02-02 12:22:00,353 - INFO - Started validation epoch.
+2026-02-02 12:22:01,582 - INFO - Saved best model with validation loss 1.2272 to data/trained_models/crop_yield/vita_corn_yield_2.0m_best.pth
+2026-02-02 12:22:01,582 - INFO - Epoch [1 / 40]: Train loss: 1.521 Validation loss: 1.227 Best Val loss: 1.227
+2026-02-02 12:22:01,584 - INFO - Started training epoch.
+2026-02-02 12:23:23,804 - INFO - Started validation epoch.
+2026-02-02 12:23:25,327 - INFO - Saved best model with validation loss 0.8670 to data/trained_models/crop_yield/vita_corn_yield_2.0m_best.pth
+2026-02-02 12:23:25,327 - INFO - Epoch [2 / 40]: Train loss: 0.542 Validation loss: 0.867 Best Val loss: 0.867
+2026-02-02 12:23:25,427 - INFO - Started training epoch.
+2026-02-02 12:24:47,723 - INFO - Started validation epoch.
+2026-02-02 12:24:49,264 - INFO - Saved best model with validation loss 0.8122 to data/trained_models/crop_yield/vita_corn_yield_2.0m_best.pth
+2026-02-02 12:24:49,264 - INFO - Epoch [3 / 40]: Train loss: 0.244 Validation loss: 0.812 Best Val loss: 0.812
+2026-02-02 12:24:49,267 - INFO - Started training epoch.
+2026-02-02 12:26:12,440 - INFO - Started validation epoch.
+2026-02-02 12:26:13,623 - INFO - Epoch [4 / 40]: Train loss: 0.203 Validation loss: 0.834 Best Val loss: 0.812
+2026-02-02 12:26:13,625 - INFO - Started training epoch.
+2026-02-02 12:27:36,344 - INFO - Started validation epoch.
+2026-02-02 12:27:37,813 - INFO - Epoch [5 / 40]: Train loss: 0.179 Validation loss: 0.845 Best Val loss: 0.812
+2026-02-02 12:27:37,815 - INFO - Started training epoch.
+2026-02-02 12:29:01,093 - INFO - Started validation epoch.
+2026-02-02 12:29:02,276 - INFO - Epoch [6 / 40]: Train loss: 0.167 Validation loss: 0.845 Best Val loss: 0.812
+2026-02-02 12:29:02,277 - INFO - Started training epoch.
+2026-02-02 12:30:24,938 - INFO - Started validation epoch.
+2026-02-02 12:30:26,383 - INFO - Epoch [7 / 40]: Train loss: 0.159 Validation loss: 0.835 Best Val loss: 0.812
+2026-02-02 12:30:26,489 - INFO - Started training epoch.
+2026-02-02 12:31:49,475 - INFO - Started validation epoch.
+2026-02-02 12:31:51,142 - INFO - Epoch [8 / 40]: Train loss: 0.155 Validation loss: 0.840 Best Val loss: 0.812
+2026-02-02 12:31:51,143 - INFO - Started training epoch.
+2026-02-02 12:33:14,478 - INFO - Started validation epoch.
+2026-02-02 12:33:15,751 - INFO - Epoch [9 / 40]: Train loss: 0.153 Validation loss: 0.894 Best Val loss: 0.812
+2026-02-02 12:33:15,752 - INFO - Started training epoch.
+2026-02-02 12:34:38,149 - INFO - Started validation epoch.
+2026-02-02 12:34:39,502 - INFO - Epoch [10 / 40]: Train loss: 0.150 Validation loss: 0.861 Best Val loss: 0.812
+2026-02-02 12:34:39,504 - INFO - Started training epoch.
+2026-02-02 12:36:02,392 - INFO - Started validation epoch.
+2026-02-02 12:36:03,715 - INFO - Epoch [11 / 40]: Train loss: 0.153 Validation loss: 0.841 Best Val loss: 0.812
+2026-02-02 12:36:03,717 - INFO - Started training epoch.
+2026-02-02 12:37:26,798 - INFO - Started validation epoch.
+2026-02-02 12:37:28,350 - INFO - Epoch [12 / 40]: Train loss: 0.145 Validation loss: 0.873 Best Val loss: 0.812
+2026-02-02 12:37:28,453 - INFO - Started training epoch.
+2026-02-02 12:38:51,258 - INFO - Started validation epoch.
+2026-02-02 12:38:52,722 - INFO - Epoch [13 / 40]: Train loss: 0.141 Validation loss: 0.851 Best Val loss: 0.812
+2026-02-02 12:38:52,724 - INFO - Started training epoch.
+2026-02-02 12:40:15,570 - INFO - Started validation epoch.
+2026-02-02 12:40:16,940 - INFO - Epoch [14 / 40]: Train loss: 0.136 Validation loss: 0.861 Best Val loss: 0.812
+2026-02-02 12:40:16,942 - INFO - Started training epoch.
+2026-02-02 12:41:42,647 - INFO - Started validation epoch.
+2026-02-02 12:41:44,085 - INFO - Epoch [15 / 40]: Train loss: 0.135 Validation loss: 0.895 Best Val loss: 0.812
+2026-02-02 12:41:44,087 - INFO - Started training epoch.
+2026-02-02 12:43:10,993 - INFO - Started validation epoch.
+2026-02-02 12:43:12,284 - INFO - Epoch [16 / 40]: Train loss: 0.131 Validation loss: 0.825 Best Val loss: 0.812
+2026-02-02 12:43:12,286 - INFO - Started training epoch.
+2026-02-02 12:44:39,198 - INFO - Started validation epoch.
+2026-02-02 12:44:40,456 - INFO - Epoch [17 / 40]: Train loss: 0.129 Validation loss: 0.838 Best Val loss: 0.812
+2026-02-02 12:44:40,568 - INFO - Started training epoch.
+2026-02-02 12:46:08,085 - INFO - Started validation epoch.
+2026-02-02 12:46:09,433 - INFO - Epoch [18 / 40]: Train loss: 0.124 Validation loss: 0.883 Best Val loss: 0.812
+2026-02-02 12:46:09,435 - INFO - Started training epoch.
+2026-02-02 12:47:36,716 - INFO - Started validation epoch.
+2026-02-02 12:47:38,255 - INFO - Epoch [19 / 40]: Train loss: 0.121 Validation loss: 0.892 Best Val loss: 0.812
+2026-02-02 12:47:38,257 - INFO - Started training epoch.
+2026-02-02 12:49:05,894 - INFO - Started validation epoch.
+2026-02-02 12:49:07,241 - INFO - Epoch [20 / 40]: Train loss: 0.117 Validation loss: 0.944 Best Val loss: 0.812
+2026-02-02 12:49:07,244 - INFO - Started training epoch.
+2026-02-02 12:50:34,936 - INFO - Started validation epoch.
+2026-02-02 12:50:36,503 - INFO - Epoch [21 / 40]: Train loss: 0.115 Validation loss: 0.899 Best Val loss: 0.812
+2026-02-02 12:50:36,505 - INFO - Started training epoch.
+2026-02-02 12:52:04,586 - INFO - Started validation epoch.
+2026-02-02 12:52:05,912 - INFO - Epoch [22 / 40]: Train loss: 0.111 Validation loss: 0.911 Best Val loss: 0.812
+2026-02-02 12:52:06,020 - INFO - Started training epoch.
+2026-02-02 12:53:34,028 - INFO - Started validation epoch.
+2026-02-02 12:53:35,630 - INFO - Epoch [23 / 40]: Train loss: 0.108 Validation loss: 0.877 Best Val loss: 0.812
+2026-02-02 12:53:35,632 - INFO - Started training epoch.
+2026-02-02 12:55:03,242 - INFO - Started validation epoch.
+2026-02-02 12:55:05,201 - INFO - Epoch [24 / 40]: Train loss: 0.104 Validation loss: 0.928 Best Val loss: 0.812
+2026-02-02 12:55:05,203 - INFO - Started training epoch.
+2026-02-02 12:56:32,999 - INFO - Started validation epoch.
+2026-02-02 12:56:34,338 - INFO - Epoch [25 / 40]: Train loss: 0.101 Validation loss: 0.863 Best Val loss: 0.812
+2026-02-02 12:56:34,340 - INFO - Started training epoch.
+2026-02-02 12:58:01,792 - INFO - Started validation epoch.
+2026-02-02 12:58:03,458 - INFO - Epoch [26 / 40]: Train loss: 0.097 Validation loss: 0.936 Best Val loss: 0.812
+2026-02-02 12:58:03,460 - INFO - Started training epoch.
+2026-02-02 12:59:30,621 - INFO - Started validation epoch.
+2026-02-02 12:59:32,010 - INFO - Epoch [27 / 40]: Train loss: 0.093 Validation loss: 0.893 Best Val loss: 0.812
+2026-02-02 12:59:32,116 - INFO - Started training epoch.

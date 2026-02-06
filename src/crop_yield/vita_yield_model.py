@@ -41,10 +41,26 @@ class VITAYieldModel(BaseModel):
 
         self.weather_model_frozen = False
 
-    def yield_model(self, weather, coord, year, interval, weather_feature_mask, y_past):
+    def yield_model(
+        self,
+        weather,
+        coord,
+        year,
+        interval,
+        weather_feature_mask,
+        y_past,
+        attention_bias=None,
+        return_attention: bool = False,
+    ):
         # Apply attention to reduce sequence dimension
-        attention_weights = self.weather_attention(weather)  # batch_size x seq_len x 1
-        attention_weights = torch.softmax(attention_weights, dim=1)
+        attention_logits = self.weather_attention(weather)  # batch_size x seq_len x 1
+        if attention_bias is not None:
+            attention_logits = attention_logits + attention_bias
+        if weather_feature_mask is not None and attention_logits.shape[:2] == weather_feature_mask.shape[:2]:
+            # mask padded steps by setting logits to large negative where all features are masked
+            valid_steps = (~weather_feature_mask).any(dim=2, keepdim=True)  # (B, seq, 1)
+            attention_logits = attention_logits.masked_fill(~valid_steps, -1e9)
+        attention_weights = torch.softmax(attention_logits, dim=1)
 
         # Apply attention to get weighted sum
         weather_attended = torch.sum(
@@ -52,7 +68,10 @@ class VITAYieldModel(BaseModel):
         )  # batch_size x weather_dim
 
         mlp_input = torch.cat([weather_attended, y_past], dim=1)
-        return self.yield_mlp(mlp_input)
+        yield_pred = self.yield_mlp(mlp_input)
+        if return_attention:
+            return yield_pred, attention_weights
+        return yield_pred
 
     def _impute_weather(self, original_weather, imputed_weather, weather_feature_mask):
         """
@@ -109,6 +128,8 @@ class VITAYieldModel(BaseModel):
         weather_feature_mask,
         y_past,
         src_key_padding_mask=None,
+        attention_bias=None,
+        return_attention: bool = False,
     ):
         """
         weather: batch_size x seq_len x n_features
@@ -117,6 +138,7 @@ class VITAYieldModel(BaseModel):
         interval: batch_size x 1 (UNNORMALIZED in days)
         weather_feature_mask: batch_size x seq_len x n_features
         y_past: batch_size x n_past_years+1
+        attention_bias: optional tensor (batch_size x seq_len x 1) added to attention logits
         """
         # VITA returns (mu_x, var_x, mu_p, var_p)
         mu_x, var_x, mu_p, var_p = self.weather_model(
@@ -136,12 +158,17 @@ class VITAYieldModel(BaseModel):
         z_imputed = self._impute_weather(weather, z, weather_feature_mask)
 
         # Predict yield using imputed weather
-        yield_pred = self.yield_model(
+        yield_outputs = self.yield_model(
             z_imputed,
             coord,
             year,
             interval,
-            weather_feature_mask=None,
+            weather_feature_mask=weather_feature_mask,
             y_past=y_past,
+            attention_bias=attention_bias,
+            return_attention=return_attention,
         )
-        return yield_pred, z, mu_x, var_x, mu_p, var_p
+        if return_attention:
+            yield_pred, attention_weights = yield_outputs
+            return yield_pred, z, mu_x, var_x, mu_p, var_p, attention_weights
+        return yield_outputs, z, mu_x, var_x, mu_p, var_p

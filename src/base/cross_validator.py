@@ -78,6 +78,11 @@ class CrossValidator:
             trainer = self.trainer_class(model=model, **self.trainer_kwargs)
             best_loss = trainer.train()
 
+            # --- NEW: run test-year evaluation once after training ---
+            if self.trainer_kwargs.get("test_year") is not None:
+                trainer.evaluate_test_year()
+            # ---------------------------------------------------------
+
             # Extract results from this fold
             fold_results.append(best_loss)
 
